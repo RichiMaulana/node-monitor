@@ -3,8 +3,10 @@ const pidusage = require("pidusage");
 const { processMonitorRepo } = require("../repositories");
 const os = require("os");
 const axios = require("axios").default;
+const { exec } = require('child_process')
 
-const { SERVER_URL, MONITOR_PROCESS_INTERVAL } = process.env;
+let { SERVER_URL, MONITOR_PROCESS_INTERVAL, MONITOR_PROCESS_MODE } = process.env;
+MONITOR_PROCESS_MODE = MONITOR_PROCESS_MODE ? MONITOR_PROCESS_MODE : 'ps'
 
 async function getPids() {
   return new Promise((resolve, reject) => {
@@ -41,19 +43,71 @@ async function getUsagePerPid(pids) {
   return result;
 }
 
+async function getServiceUsagePs() {
+  return new Promise((resolve, reject) => {
+    exec("ps -Ao pid,pcpu,pmem,comm,cmd --no-headers", (error, stdout, stderr) => {
+      if (error) {
+        reject(error)
+        return;
+      }
+      if (stderr) {
+        reject(stderr)
+        return;
+      }
+    
+      let data = [];
+      const processData = stdout.split("\n");
+      for (let process of processData) {
+        let row = process.split(" ").filter((el) => {
+          if (el.match(/[\w0-9]/)) return el;
+        });
+        data.push(row);
+      }
+    
+      let processObj = [];
+      for (let main of data) {
+        // if (main.length < 1) continue
+        // for (let second = 0; second < 5; second++) {
+        const timestamp = new Date();
+        const hostname = os.hostname()
+        if (parseFloat(main[1]) > 0 || parseFloat(main[2]) > 0) {
+          processObj.push({
+            hostname,
+            cpu_usage_percent: parseFloat(main[1]),
+            memory_usage: parseFloat(main[2]),
+            process_name: main.slice(4).join(" "),
+            timestamp,
+          });
+        }
+      }
+      resolve(processObj)
+    });
+  })
+}
+
 async function monitorProcess(MonitorEmitter) {
-  const pids = await getPids();
-  const usageData = await getUsagePerPid(pids);
-  if (usageData.length > 0) MonitorEmitter.emit("process", usageData);
-  return setInterval(
-    async () => {
-      const pids = await getPids();
-      const usageData = await getUsagePerPid(pids);
-      if (usageData.length > 0)
-        return MonitorEmitter.emit("process", usageData);
-    },
-    MONITOR_PROCESS_INTERVAL ? MONITOR_PROCESS_INTERVAL * 1000 : 30000
-  );
+  if (MONITOR_PROCESS_MODE === "node") {
+    const pids = await getPids();
+    const usageData = await getUsagePerPid(pids);
+    if (usageData.length > 0) MonitorEmitter.emit("process", usageData);
+    return setInterval(
+      async () => {
+        const pids = await getPids();
+        const usageData = await getUsagePerPid(pids);
+        if (usageData.length > 0)
+          return MonitorEmitter.emit("process", usageData);
+      },
+      MONITOR_PROCESS_INTERVAL ? MONITOR_PROCESS_INTERVAL * 1000 : 30000
+    );
+  } else if (MONITOR_PROCESS_MODE === "ps") {
+    MonitorEmitter.emit("process", await getServiceUsagePs())
+    return setInterval(
+      async () => {
+        MonitorEmitter.emit("process", await getServiceUsagePs())
+      },
+      MONITOR_PROCESS_INTERVAL ? MONITOR_PROCESS_INTERVAL * 1000 : 30000
+    );
+  }
 }
 
 const eventHandler = {
@@ -80,4 +134,4 @@ const eventHandler = {
   },
 };
 
-module.exports = { getPids, getUsagePerPid, monitorProcess, eventHandler };
+module.exports = { getPids, getUsagePerPid, monitorProcess, eventHandler, getServiceUsagePs };
