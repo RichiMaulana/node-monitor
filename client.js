@@ -23,8 +23,8 @@ async function main() {
       diskMonitor.eventHandler.postToServer(data)
     );
 
-    // processMonitor.monitorProcess(MonitorEmitter);
-    // networkMonitor.monitorNetwork(MonitorEmitter);
+    processMonitor.monitorProcess(MonitorEmitter);
+    networkMonitor.monitorNetwork(MonitorEmitter);
     diskMonitor.monitorDisks(MonitorEmitter);
   } catch (err) {
     console.log(err);

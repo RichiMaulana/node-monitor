@@ -4,7 +4,7 @@ const { processMonitorRepo } = require("../repositories");
 const os = require("os");
 const axios = require("axios").default;
 
-const { SERVER_URL } = process.env;
+const { SERVER_URL, MONITOR_PROCESS_INTERVAL } = process.env;
 
 async function getPids() {
   return new Promise((resolve, reject) => {
@@ -45,17 +45,20 @@ async function monitorProcess(MonitorEmitter) {
   const pids = await getPids();
   const usageData = await getUsagePerPid(pids);
   if (usageData.length > 0) MonitorEmitter.emit("process", usageData);
-  return setInterval(async () => {
-    const pids = await getPids();
-    const usageData = await getUsagePerPid(pids);
-    if (usageData.length > 0) return MonitorEmitter.emit("process", usageData);
-  }, 10000);
+  return setInterval(
+    async () => {
+      const pids = await getPids();
+      const usageData = await getUsagePerPid(pids);
+      if (usageData.length > 0)
+        return MonitorEmitter.emit("process", usageData);
+    },
+    MONITOR_PROCESS_INTERVAL ? MONITOR_PROCESS_INTERVAL * 1000 : 30000
+  );
 }
 
 const eventHandler = {
   saveToDb: async (data) => {
     data.forEach((row) => {
-      console.log(row);
       processMonitorRepo.insertData(row);
     });
   },
@@ -70,8 +73,8 @@ const eventHandler = {
     //   memory_usage: row.mem,
     // };
     // });
-    console.log(data);
     axios.post(SERVER_URL + "monitors/process-data", data).catch((err) => {
+      console.log(err.message)
       return;
     });
   },

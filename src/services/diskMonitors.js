@@ -3,7 +3,7 @@ const { diskMonitorRepo } = require("../repositories");
 const os = require("os");
 const axios = require("axios").default;
 
-const { SERVER_URL } = process.env;
+const { SERVER_URL, MONITOR_DISK_INTERVAL } = process.env;
 
 async function monitorDisks(MonitorEmitter) {
   si.fsSize().then((data) => {
@@ -35,19 +35,18 @@ async function monitorDisks(MonitorEmitter) {
       });
       MonitorEmitter.emit("disk", returnData);
     });
-  }, 60000 * 10);
+  }, MONITOR_DISK_INTERVAL ? MONITOR_DISK_INTERVAL * 10000 : 600000);
 }
 
 const eventHandler = {
   saveToDb: async (data) => {
-    console.log(data);
     data.forEach((row) => {
       diskMonitorRepo.insertOrUpdate(row);
     });
   },
   postToServer: async (data) => {
-    console.log(data);
     axios.post(SERVER_URL + "monitors/disk-data", data).catch((err) => {
+      console.error('Disk Data Store Error:', err.message)
       return;
     });
   },
