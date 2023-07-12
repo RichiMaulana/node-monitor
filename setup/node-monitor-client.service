@@ -1,0 +1,15 @@
+[Unit]
+Description=Node Monitor Client Service
+
+[Service]
+WorkingDirectory=/srv/node-monitor/
+ExecStart=node client.js
+ExecReload=/bin/kill -HUP $MAINPID
+Type=simple
+Restart=always
+
+StandardOutput=append:/var/log/node-monitor.log
+StandardError=append:/var/log/node-monitor.log
+
+[Install]
+WantedBy=multi-user.target
