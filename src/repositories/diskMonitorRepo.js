@@ -24,7 +24,7 @@ exports.insertOrUpdate = async function (data) {
 
 exports.getDiskDataByHostname = async function (hostname, divider=1000000000) {
   let queryString = `
-        select (sum(size) / :divider) as total_size, (sum(used) / :divider) as total_used from disk_data where hostname = :hostname group by hostname;`;
+        select (sum(size) / :divider) as total_size, (sum(used) / :divider) as total_used from disk_data where hostname = :hostname and name != 'overlay' group by hostname;`;
 
   return await db.sequelize.query(queryString, {
     type: QueryTypes.SELECT,
