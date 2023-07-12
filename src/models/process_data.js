@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
         timestamp: DataTypes.DATE,
         process_name: DataTypes.TEXT,
         cpu_usage_percent: DataTypes.DOUBLE,
-        memory_usage: DataTypes.INTEGER
+        memory_usage: DataTypes.DOUBLE
     };
     process_data.init(schema, {
         sequelize,

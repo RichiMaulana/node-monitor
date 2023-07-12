@@ -1,15 +1,18 @@
-const { network_data } = require("../models");
-const { Op } = require("sequelize");
+const db = require('../models')
+const { network_data } = db;
+const { Op, QueryTypes, fn, where, col } = db.Sequelize;
 
 exports.getAllData = async function () {
   return await network_data.findALl();
 };
 
 exports.getAllHostname = async function () {
-  return await network_data.findAll({
+  const data = await network_data.findAll({
     group: "hostname",
     attributes: ["hostname"],
   });
+
+  return data.map((el) => el.hostname)
 };
 
 exports.insertOrUpsert = async function (data) {
@@ -26,6 +29,7 @@ exports.insertOrUpsert = async function (data) {
   som.setMonth(date.getMonth() - 1);
   const eom = new Date(eod);
   eom.setMonth(date.getMonth() + 1);
+  // const month = date.getMonth() + 1
 
   let existedData;
   if (data.type === "monthly") {
@@ -33,6 +37,9 @@ exports.insertOrUpsert = async function (data) {
       where: {
         hostname: data.hostname,
         type: data.type,
+        // [Op.and]: [
+        //   where(fn('MONTH', col('timestamp')), month)
+        // ]
         timestamp: {
           [Op.between]: [som, eom],
         },
@@ -43,6 +50,9 @@ exports.insertOrUpsert = async function (data) {
       where: {
         hostname: data.hostname,
         type: data.type,
+        // [Op.and]: [
+        //   where(fn('MONTH', col('timestamp')), month)
+        // ]
         timestamp: {
           [Op.between]: [sod, eod],
         },
@@ -95,3 +105,19 @@ exports.insertOrUpsert = async function (data) {
   }
   return;
 };
+
+exports.getNetworkDataByHostname = async function (hostname, month, divider=1000000000) {
+  let queryString = `
+    select hostname, ((tx) / :divider) as total_upload, ((rx) / :divider) as total_download from network_data where hostname = :hostname and month(timestamp) = :month group by hostname;`;
+
+  return await db.sequelize.query(queryString, {
+    type: QueryTypes.SELECT,
+    raw: true,
+    replacements: {
+      hostname,
+      month,
+      divider,
+    },
+  });
+};
+

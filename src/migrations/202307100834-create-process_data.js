@@ -22,7 +22,7 @@ module.exports = {
         type: Sequelize.DOUBLE,
       },
       memory_usage: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.DOUBLE,
       },
     //   createdAt: {
     //     allowNull: false,

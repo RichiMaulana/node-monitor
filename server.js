@@ -11,7 +11,7 @@ app.use(express.json());
 app.post('/monitors/process-data', controllers.processData)
 app.post('/monitors/network-data', controllers.networkData)
 app.post('/monitors/disk-data', controllers.diskData)
-app.get('/monitors/exports')
+app.get('/monitors/exports', controllers.exportDataAll)
 
 app.listen(PORT, () => {
     console.log('API server started, listen on port:', PORT)
